@@ -3,7 +3,6 @@ import json
 import os
 
 
-# Create your models here.
 class Category(models.Model):
     category_id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=50)
