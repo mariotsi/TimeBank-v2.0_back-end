@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.http import Http404
 from rest_framework import generics
 from rest_framework import viewsets
+from rest_framework.authentication import BasicAuthentication
 from server.serializers import UserSerializer, ListingSerializer
 from server.models import *
 from rest_framework import permissions
@@ -61,3 +62,5 @@ class CityViewSet(viewsets.ReadOnlyModelViewSet):
     paginate_by = 100
     queryset = City.objects.all()
     model = City
+    authentication_classes = (BasicAuthentication,)
+    permission_classes = (permissions.IsAuthenticated,)
