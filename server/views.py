@@ -49,10 +49,22 @@ class ListingViewSet(viewsets.ViewSet):
     """
     Basic viewset for Listing model
     """
-    queryset = Listing.objects.all()
+    # queryset = Listing.objects.all()
     model = Listing
     serializer_class = ListingSerializer
 
+    def list(self, request, *args):
+        queryset = Listing.objects.all()
+        serializer = ListingSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def retrieve(self, request, *args, **kwargs):
+        queryset = Listing.objects.all().get(id=kwargs['pk'])
+        if queryset is None:
+            raise Http404
+        return Response(ListingSerializer(queryset).data)
+
+    @permission_classes((IsAuthenticated), )
     def create(self, request, *args):
         listing_data = request.DATA
         new_listing = Listing(category=Category.objects.get(category_id=listing_data['category']),
@@ -60,8 +72,26 @@ class ListingViewSet(viewsets.ViewSet):
                               creation_date=datetime.now())
         new_listing.owner = request.user
         new_listing.save()
-
         return HttpResponse(status=201)
+
+    @permission_classes((IsAuthenticated), )
+    def update(self, request, *args, **kwargs):
+
+        listing = Listing.objects.all().get(id=kwargs['pk'])
+        if listing.owner != request.user:  # if the current user is not the owner abort and send 403 Forbidden
+            return HttpResponse(status=403)  # Http404
+        if len(request.DATA) < 1:  # if there is no data within the request and send 204 "No content"
+            return HttpResponse(status=204)
+        else:
+            for key in ['category', 'description']:
+                if key in request.DATA.keys():
+                    if key == 'category':
+                        listing.category = Category.objects.get(category_id=request.DATA['category'])
+                    if key == 'description':
+                        listing.description = request.DATA['description']
+            listing.save()
+            return HttpResponse(status=200)
+
 
     def pre_save(self, obj):
         obj.owner = self.request.user

@@ -7,7 +7,7 @@ from server import views
 
 admin.autodiscover()
 
-router = routers.DefaultRouter(trailing_slash=False)
+router = routers.DefaultRouter()
 router.register(r'users', views.UserViewSet)
 router.register(r'listings', views.ListingViewSet)
 

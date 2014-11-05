@@ -1,11 +1,12 @@
 # Register your models here.
 from django.contrib.auth import get_user_model
-from server.models import *
 from django import forms
 from django.contrib import admin
 from django.contrib.auth.models import Group
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.forms import ReadOnlyPasswordHashField
+
+from server.models import *
 
 
 class CityAdmin(admin.ModelAdmin):
@@ -22,7 +23,7 @@ class UserCreationForm(forms.ModelForm):
 
     class Meta:
         model = get_user_model()
-        fields = ('email',)
+        fields = ('username',)
 
     def clean_password2(self):
         # Check that the two password entries match
@@ -50,7 +51,7 @@ class UserChangeForm(forms.ModelForm):
 
     class Meta:
         model = get_user_model()
-        fields = ('email', 'password', 'is_active', 'is_admin')
+        fields = ['email', 'password', 'is_active', 'is_admin']
 
     def clean_password(self):
         # Regardless of what the user provides, return the initial value.
@@ -61,8 +62,9 @@ class UserChangeForm(forms.ModelForm):
 
 class MyUserAdmin(UserAdmin):
     # The forms to add and change user instances
-    form = UserChangeForm
+    # form = UserChangeForm
     add_form = UserCreationForm
+
 
     # The fields to be used in displaying the User model.
     # These override the definitions on the base UserAdmin
@@ -79,10 +81,10 @@ class MyUserAdmin(UserAdmin):
     # add_fieldsets is not a standard ModelAdmin attribute. UserAdmin
     # overrides get_fieldsets to use this attribute when creating a user.
     add_fieldsets = (
-        (None, {
-            'classes': ('wide',),
-            'fields': ('email', 'password1', 'password2')}
-        ),
+        (None, {'fields': (('email', 'username'), ('password1', 'password2'))}),
+        ('Permissions', {'fields': ('is_admin',)}),
+        ('Hours', {'fields': (('available_hours', 'worked_hours', 'requested_hours', 'used_hours'),)}),
+        (None, {'fields': ('address', 'city',)}),
     )
     search_fields = ('email',)
     ordering = ('email',)
@@ -137,6 +139,6 @@ class CategoryAdmin(admin.ModelAdmin):
 
 admin.site.unregister(Group)
 admin.site.register(City, CityAdmin)
-admin.site.register(User, MyUserAdmin)
+admin.site.register(get_user_model(), MyUserAdmin)
 admin.site.register(Category, CategoryAdmin)
 admin.site.register(Listing, ListingAdmin)
