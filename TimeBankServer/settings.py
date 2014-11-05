@@ -61,7 +61,7 @@ WSGI_APPLICATION = 'TimeBankServer.wsgi.application'
 
 # DATABASES = {
 # 'default': {
-#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
+# 'ENGINE': 'django.db.backends.postgresql_psycopg2',
 #         'NAME': 'd5ur75u08e1klj',
 #         'USER': 'jhzipaadqrmovg',
 #         'PASSWORD': '6H0g4vh_97yrDm4EG31zZMCl8c',
@@ -102,6 +102,6 @@ AUTH_USER_MODEL = 'server.User'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.TokenAuthentication',
-   )
+        'rest_framework.authentication.BasicAuthentication',
+    )
 }
