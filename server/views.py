@@ -3,10 +3,8 @@ from datetime import datetime
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import Http404, HttpResponse
-from rest_framework import generics
 from rest_framework import viewsets
-from rest_framework.authentication import BasicAuthentication
-from rest_framework.decorators import permission_classes
+from rest_framework.decorators import permission_classes, list_route
 from rest_framework.parsers import JSONParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -54,6 +52,13 @@ class ListingViewSet(viewsets.ViewSet):
     model = Listing
     serializer_class = ListingSerializer
 
+    @list_route(methods=['get'], permission_classes=[IsAuthenticated])
+    def mine(self, request, *args, **kwargs):
+        queryset = Listing.objects.filter(owner=request.user)
+        if not queryset.exists():
+            raise Http404
+        return Response(ListingSerializer(queryset, many=True).data)
+
     def list(self, request, *args):
         queryset = Listing.objects.all()
         serializer = ListingSerializer(queryset, many=True)
@@ -98,6 +103,7 @@ class ListingViewSet(viewsets.ViewSet):
             listing.save()
             return HttpResponse(status=201)
 
+    @permission_classes((IsAuthenticated), )
     def destroy(self, request, *args, **kwargs):
         try:
             listing = Listing.objects.all().get(id=kwargs['pk'])
@@ -110,20 +116,6 @@ class ListingViewSet(viewsets.ViewSet):
 
     def pre_save(self, obj):
         obj.owner = self.request.user
-
-
-class UserListingsList(generics.ListAPIView):
-    """
-    This view return a list of all listings owned by
-    the in the URL user.
-    """
-    serializer_class = ListingSerializer
-
-    def get_queryset(self):
-        queryset = Listing.objects.filter(owner=self.kwargs['username'])
-        if not queryset.exists():
-            raise Http404
-        return queryset
 
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
@@ -142,5 +134,17 @@ class CityViewSet(viewsets.ReadOnlyModelViewSet):
     paginate_by = 100
     queryset = City.objects.all()
     model = City
-    authentication_classes = (BasicAuthentication,)
-    permission_classes = (permissions.IsAuthenticated,)
+
+    @list_route(methods=['get'])
+    def provinces(self, request, *args, **kwargs):
+        cities = City.objects.all()
+        provinces = set([city.province for city in cities])
+        return Response(sorted(provinces))
+
+    @list_route(methods=['get'])
+    def get_cities_by_province(self, request, *args, **kwargs):
+        cities = City.objects.filter(province=request.QUERY_PARAMS['prov'])
+        cities = ([[city.name, city.id] for city in cities])
+        if len(cities) < 1:
+            return HttpResponse(status=400)  # Bad Request
+        return Response(cities)

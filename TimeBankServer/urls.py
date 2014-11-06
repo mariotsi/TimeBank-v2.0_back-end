@@ -16,7 +16,8 @@ router.register(r'cities', views.CityViewSet)
 
 urlpatterns = patterns('',
                        url(r'^admin/', include(admin.site.urls)),
-                       url(r'^listings/user/(?P<username>.+)/$', views.UserListingsList.as_view()),
+                       # url(r'^listings/user/(?P<username>.+)/$', views.UserListingsList.as_view()),
+                       #url(r'^listings/mine/$', views.UserListingsList.as_view()),
                        url(r'^', include(router.urls)),
 
                        )
