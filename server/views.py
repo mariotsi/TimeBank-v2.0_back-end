@@ -3,8 +3,9 @@ from datetime import datetime
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import Http404, HttpResponse
+from django.template.defaultfilters import upper
 from rest_framework import viewsets
-from rest_framework.decorators import permission_classes, list_route
+from rest_framework.decorators import permission_classes, list_route, detail_route
 from rest_framework.parsers import JSONParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -93,15 +94,14 @@ class ListingViewSet(viewsets.ViewSet):
             return HttpResponse(status=403)
         if len(request.DATA) < 1:  # if there is no data within the request and send 204 "No content"
             return HttpResponse(status=204)
-        else:
-            for key in ['category', 'description']:
-                if key in request.DATA.keys():
-                    if key == 'category':
-                        listing.category = Category.objects.get(category_id=request.DATA['category'])
-                    if key == 'description':
-                        listing.description = request.DATA['description']
-            listing.save()
-            return HttpResponse(status=201)
+        category = request.DATA.get('category', None)
+        description = request.DATA.get('description', None)
+        if category is not None:
+            listing.category_id = category
+        if description is not None:
+            listing.description = description
+        listing.save()
+        return HttpResponse(status=201)
 
     @permission_classes((IsAuthenticated), )
     def destroy(self, request, *args, **kwargs):
@@ -114,8 +114,58 @@ class ListingViewSet(viewsets.ViewSet):
         listing.delete()
         return HttpResponse(status=410)  # Gone
 
-    def pre_save(self, obj):
-        obj.owner = self.request.user
+    @detail_route(methods=['PUT'], permission_classes=[IsAuthenticated])
+    def claim(self, request, *args, **kwargs):
+        try:
+            listing = Listing.objects.all().get(id=kwargs['pk'])
+        except ObjectDoesNotExist:
+            raise Http404
+        if listing.owner == request.user:  # if the current user IS the owner abort and send 403 Forbidden
+            return HttpResponse(status=403)
+        if listing.requested:
+            return HttpResponse(status=406)
+        listing.requested = True
+        listing.applicant = request.user
+        listing.save()
+        return HttpResponse(status=201)
+
+    @detail_route(methods=['DELETE'], permission_classes=[IsAuthenticated])
+    def unclaim(self, request, *args, **kwargs):
+        try:
+            listing = Listing.objects.all().get(id=kwargs['pk'])
+        except ObjectDoesNotExist:
+            raise Http404
+        # if the current user is not the applicant or the listing is not requested
+        if listing.applicant != request.user or not listing.requested:
+            return HttpResponse(status=403)
+        listing.requested = False
+        listing.applicant = None
+        listing.save()
+        return HttpResponse(status=410)
+
+    @list_route(methods=['get'])
+    def search(self, request, *args, **kwargs):
+        listings = Listing.objects
+        listings = listings.filter(requested=False)
+        province = request.QUERY_PARAMS.get('province', None)
+        city = request.QUERY_PARAMS.get('city', None)
+        description = request.QUERY_PARAMS.get('description', None)
+        category = request.QUERY_PARAMS.get('category', None)
+        if province is not None:
+            listings = listings.filter(owner__city__province=upper(province))
+        if city is not None:
+            listings = listings.filter(owner__city=city)
+        if description is not None:
+            listings = listings.filter(description__icontains=description)
+        if category is not None:
+            listings = listings.filter(category_id=category)
+        if len(listings) < 1:
+            return HttpResponse(status=204)  # No Content
+        return Response(ListingSerializer(listings, many=True).data)
+
+
+        # def pre_save(self, obj):
+        # obj.owner = self.request.user
 
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
@@ -143,7 +193,7 @@ class CityViewSet(viewsets.ReadOnlyModelViewSet):
 
     @list_route(methods=['get'])
     def get_cities_by_province(self, request, *args, **kwargs):
-        cities = City.objects.filter(province=request.QUERY_PARAMS['prov'])
+        cities = City.objects.filter(province=request.QUERY_PARAMS.get('province', None))
         cities = ([[city.name, city.id] for city in cities])
         if len(cities) < 1:
             return HttpResponse(status=400)  # Bad Request
