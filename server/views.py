@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ObjectDoesNotExist
 from django.http import Http404, HttpResponse
 from rest_framework import generics
 from rest_framework import viewsets
@@ -26,7 +27,7 @@ class UserViewSet(viewsets.ViewSet):
     # serializer_class = UserSerializer
     # permission_classes = (permissions.IsAdminUser,)
 
-    @permission_classes((IsAuthenticated), )
+    @permission_classes((IsAuthenticated), )  # TODO change to IsAdmin in production
     def list(self, request):
         queryset = get_user_model().objects.all()
         serializer = UserSerializer(queryset, many=True)
@@ -59,7 +60,10 @@ class ListingViewSet(viewsets.ViewSet):
         return Response(serializer.data)
 
     def retrieve(self, request, *args, **kwargs):
-        queryset = Listing.objects.all().get(id=kwargs['pk'])
+        try:
+            queryset = Listing.objects.all().get(id=kwargs['pk'])
+        except ObjectDoesNotExist:
+            raise Http404
         if queryset is None:
             raise Http404
         return Response(ListingSerializer(queryset).data)
@@ -76,10 +80,12 @@ class ListingViewSet(viewsets.ViewSet):
 
     @permission_classes((IsAuthenticated), )
     def update(self, request, *args, **kwargs):
-
-        listing = Listing.objects.all().get(id=kwargs['pk'])
+        try:
+            listing = Listing.objects.all().get(id=kwargs['pk'])
+        except ObjectDoesNotExist:
+            raise Http404
         if listing.owner != request.user:  # if the current user is not the owner abort and send 403 Forbidden
-            return HttpResponse(status=403)  # Http404
+            return HttpResponse(status=403)
         if len(request.DATA) < 1:  # if there is no data within the request and send 204 "No content"
             return HttpResponse(status=204)
         else:
@@ -90,8 +96,17 @@ class ListingViewSet(viewsets.ViewSet):
                     if key == 'description':
                         listing.description = request.DATA['description']
             listing.save()
-            return HttpResponse(status=200)
+            return HttpResponse(status=201)
 
+    def destroy(self, request, *args, **kwargs):
+        try:
+            listing = Listing.objects.all().get(id=kwargs['pk'])
+        except ObjectDoesNotExist:
+            raise Http404
+        if listing.owner != request.user:  # if the current user is not the owner abort and send 403 Forbidden
+            return HttpResponse(status=403)  # Forbidden
+        listing.delete()
+        return HttpResponse(status=410)  # Gone
 
     def pre_save(self, obj):
         obj.owner = self.request.user
