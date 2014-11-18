@@ -110,3 +110,38 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.BasicAuthentication',
     )
 }
+
+SWAGGER_SETTINGS={
+    "apiVersion": "0.1",
+    "swaggerVersion": "1.2",
+    "apis": [
+        {
+            "path": "/categories",
+            "description": "Operations about pets"
+        },
+        {
+            "path": "/user",
+            "description": "Operations about user"
+        },
+        {
+            "path": "/store",
+            "description": "Operations about store"
+        }
+    ],
+    "authorizations": {
+        "basicAuth": {
+            "type": "basicAuth",
+            "passAs": "header",
+
+        }
+    },
+    "info": {
+        "title": "TimeBank Server v2.0",
+        "description": "This is a simple TimeBank server.  You can find out more about this project "
+                       "at <a href=\"https://github.com/mariotsi/TimeBank-v2.0_back-end\">GitHub</a>.<br/>"
+                       "This project uses Basic HTTP Authorization because is intended to use on SSL",
+        "contact": "simone@mariotti.me",
+        "license": "GPLv3",
+        "licenseUrl": "https://github.com/mariotsi/TimeBank-v2.0_back-end/blob/master/LICENSE.md"
+    }
+}

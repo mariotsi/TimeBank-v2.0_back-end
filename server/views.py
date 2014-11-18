@@ -55,17 +55,40 @@ class ListingViewSet(viewsets.ViewSet):
 
     @list_route(methods=['get'], permission_classes=[IsAuthenticated])
     def mine(self, request, *args, **kwargs):
+        """
+        Return all the listings owned by the current authenticated user
+        ---
+        omit_serializer: false
+        serializer: server.serializers.ListingSerializer
+
+        responseMessages:
+           - code: 404
+             message: The user does not own any listing
+        """
         queryset = Listing.objects.filter(owner=request.user)
         if not queryset.exists():
             raise Http404
         return Response(ListingSerializer(queryset, many=True).data)
 
     def list(self, request, *args):
+        """
+        Return all the listings
+        """
         queryset = Listing.objects.all()
         serializer = ListingSerializer(queryset, many=True)
         return Response(serializer.data)
 
     def retrieve(self, request, *args, **kwargs):
+        """
+        Return the listing with id=pk
+        ---
+        omit_serializer: false
+        serializer: server.serializers.ListingSerializer
+
+        responseMessages:
+          - code: 404
+            message: There is not a listing with given id
+        """
         try:
             queryset = Listing.objects.all().get(id=kwargs['pk'])
         except ObjectDoesNotExist:
@@ -76,16 +99,115 @@ class ListingViewSet(viewsets.ViewSet):
 
     @permission_classes((IsAuthenticated), )
     def create(self, request, *args):
+        """
+        Create a new listing and return it
+        ---
+        # YAML (must be separated by `---`)
+
+        type:
+            id:
+                type: integer
+                required: true
+            creation_date:
+                type: date
+                required: true
+            description:
+                type: string
+                required: true
+            category:
+                type: integer
+                required: true
+            applicant:
+                type: integer
+                required: true
+            requested:
+                type: boolean
+                required: true
+
+        omit_serializer: true
+
+        parameters:
+           - name: description
+             required: true
+             type: string
+             paramType: form
+           - name: category
+             required: true
+             type: integer
+             paramType: form
+           - name: Authorization
+             description: Basic HTTP authentication
+             required: true
+             type: string
+             paramType: header
+
+        responseMessages:
+            - code: 204
+              message: Empty body request
+        """
+        if len(request.DATA) < 1:  # if there is no data within the request and send 204 "No content"
+            return HttpResponse(status=204)
         listing_data = request.DATA
         new_listing = Listing(category=Category.objects.get(category_id=listing_data['category']),
                               description=listing_data['description'],
                               creation_date=datetime.now())
         new_listing.owner = request.user
         new_listing.save()
-        return HttpResponse(status=201)
+        return Response(ListingSerializer(new_listing).data)
+
 
     @permission_classes((IsAuthenticated), )
     def update(self, request, *args, **kwargs):
+        """
+        Update an existing listing and return it
+        ---
+        # YAML (must be separated by `---`)
+
+        type:
+            id:
+                type: integer
+                required: true
+            creation_date:
+                type: date
+                required: true
+            description:
+                type: string
+                required: true
+            category:
+                type: integer
+                required: true
+            applicant:
+                type: integer
+                required: true
+            requested:
+                type: boolean
+                required: true
+
+        omit_serializer: true
+
+        parameters:
+           - name: description
+             required: true
+             type: string
+             paramType: form
+           - name: category
+             required: true
+             type: integer
+             paramType: form
+           - name: Authorization
+             description: Basic HTTP authentication
+             required: true
+             type: string
+             paramType: header
+
+        responseMessages:
+            - code: 204
+              message: Empty body request
+            - code: 404
+              message: There is not a listing with given id
+            - code: 403
+              message: The authenticated user is not the owner of that listing
+        """
         try:
             listing = Listing.objects.all().get(id=kwargs['pk'])
         except ObjectDoesNotExist:
@@ -101,10 +223,25 @@ class ListingViewSet(viewsets.ViewSet):
         if description is not None:
             listing.description = description
         listing.save()
-        return HttpResponse(status=201)
+        return Response(ListingSerializer(listing).data)
 
     @permission_classes((IsAuthenticated), )
     def destroy(self, request, *args, **kwargs):
+        """
+        Delete the listing with id=pk
+        ---
+        omit_serializer: false
+
+
+        responseMessages:
+          - code: 410
+            message: Listing successfully deleted
+          - code: 404
+            message: There is not a listing with given id
+          - code: 403
+            message: The authenticated user is not the owner of that listing
+
+        """
         try:
             listing = Listing.objects.all().get(id=kwargs['pk'])
         except ObjectDoesNotExist:
@@ -116,6 +253,22 @@ class ListingViewSet(viewsets.ViewSet):
 
     @detail_route(methods=['PUT'], permission_classes=[IsAuthenticated])
     def claim(self, request, *args, **kwargs):
+        """
+        Claim the listing with id=pk
+        ---
+        omit_serializer: true
+
+
+        responseMessages:
+          - code: 201
+            message: Successfully claimed
+          - code: 404
+            message: There is not a listing with given id
+          - code: 403
+            message: Listing's owner cannot claim it
+          - code: 406
+            message: Listing already claimed
+        """
         try:
             listing = Listing.objects.all().get(id=kwargs['pk'])
         except ObjectDoesNotExist:
@@ -131,6 +284,20 @@ class ListingViewSet(viewsets.ViewSet):
 
     @detail_route(methods=['DELETE'], permission_classes=[IsAuthenticated])
     def unclaim(self, request, *args, **kwargs):
+        """
+        Unclaim the listing with id=pk
+        ---
+        omit_serializer: true
+
+
+        responseMessages:
+          - code: 410
+            message: Successfully unclaimed
+          - code: 404
+            message: There is not a listing with given id
+          - code: 403
+            message: Current user is not the applicant OR the listing is not claimed
+        """
         try:
             listing = Listing.objects.all().get(id=kwargs['pk'])
         except ObjectDoesNotExist:
@@ -145,6 +312,40 @@ class ListingViewSet(viewsets.ViewSet):
 
     @list_route(methods=['get'])
     def search(self, request, *args, **kwargs):
+        """
+        Filter non requested listings based on passed arguments.
+        If no argument is passed all non requested listings are returned
+        ---
+        # YAML (must be separated by `---`)
+
+        serializer: server.serializers.ListingSerializer
+
+        omit_serializer: false
+
+        parameters:
+           - name: province
+             required: false
+             type: string(2)
+             paramType: query
+           - name: city
+             required: false
+             type: integer
+             paramType: query
+           - name: description
+             required: false
+             description: match is case insensitive and across all listing's description field
+             type: string
+             paramType: query
+           - name: category
+             required: false
+             type: integer
+             paramType: query
+
+        responseMessages:
+          - code: 204
+            message: No listing match the current search terms
+
+        """
         listings = Listing.objects
         listings = listings.filter(requested=False)
         province = request.QUERY_PARAMS.get('province', None)
@@ -164,17 +365,13 @@ class ListingViewSet(viewsets.ViewSet):
         return Response(ListingSerializer(listings, many=True).data)
 
 
-        # def pre_save(self, obj):
-        # obj.owner = self.request.user
-
-
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     """
     Basic viewset for Category model
     """
     queryset = Category.objects.all()
     model = Category
-    permission_classes = (permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAuthenticated,)
 
 
 class CityViewSet(viewsets.ReadOnlyModelViewSet):
@@ -184,17 +381,48 @@ class CityViewSet(viewsets.ReadOnlyModelViewSet):
     paginate_by = 100
     queryset = City.objects.all()
     model = City
+    permission_classes = (permissions.AllowAny,)
 
     @list_route(methods=['get'])
     def provinces(self, request, *args, **kwargs):
+        """
+        Get an ordered array with the abbreviation of all Italian Provinces
+        """
         cities = City.objects.all()
         provinces = set([city.province for city in cities])
         return Response(sorted(provinces))
 
     @list_route(methods=['get'])
     def get_cities_by_province(self, request, *args, **kwargs):
-        cities = City.objects.filter(province=request.QUERY_PARAMS.get('province', None))
+        """
+        Get an ordered array of all cities within given province
+        ---
+        # YAML (must be separated by `---`)
+
+        type:
+            name:
+               required: true
+               type: string
+            id:
+               required: true
+               type: integer
+
+        omit_serializer: false
+
+        parameters:
+            - name: province
+             description: Province where cities are needed. Case insensitive
+             required: true
+             type: string(2)
+             paramType: query
+
+        responseMessages:
+           - code: 400
+             message: Province nonexistent
+
+        """
+        cities = City.objects.filter(province=upper(request.QUERY_PARAMS.get('province', None)))
         cities = ([[city.name, city.id] for city in cities])
         if len(cities) < 1:
-            return HttpResponse(status=400)  # Bad Request
+            return HttpResponse(status=400,)  # Bad Request
         return Response(cities)
