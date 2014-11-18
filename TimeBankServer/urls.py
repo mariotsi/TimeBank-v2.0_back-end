@@ -19,7 +19,7 @@ urlpatterns = patterns('',
                        # url(r'^listings/user/(?P<username>.+)/$', views.UserListingsList.as_view()),
                        #url(r'^listings/mine/$', views.UserListingsList.as_view()),
                        url(r'^', include(router.urls)),
-
+                       url(r'^docs/', include('rest_framework_swagger.urls')),
                        )
 urlpatterns += patterns('',
                         url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),

@@ -10,8 +10,10 @@ https://docs.djangoproject.com/en/1.6/ref/settings/
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
+import dj_database_url
 
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 # Quick-start development settings - unsuitable for production
@@ -39,7 +41,8 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'server',
     'rest_framework',
-    'rest_framework.authtoken'
+    'rest_framework_swagger',
+    #'rest_framework.authtoken'
 )
 
 MIDDLEWARE_CLASSES = (
@@ -56,25 +59,31 @@ ROOT_URLCONF = 'TimeBankServer.urls'
 WSGI_APPLICATION = 'TimeBankServer.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/1.6/ref/settings/#databases
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/1.6/howto/static-files/
 
-# DATABASES = {
-# 'default': {
-# 'ENGINE': 'django.db.backends.postgresql_psycopg2',
-#         'NAME': 'd5ur75u08e1klj',
-#         'USER': 'jhzipaadqrmovg',
-#         'PASSWORD': '6H0g4vh_97yrDm4EG31zZMCl8c',
-#         'HOST': 'ec2-23-23-244-144.compute-1.amazonaws.com  ',
-#         'PORT': '5432',
-#         }
-# }
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'TimeBank.sqlite',
+STATIC_URL = '/static/'
+
+# Heroku Settings start
+
+# Honor the 'X-Forwarded-Proto' header for request.is_secure()
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+STATIC_ROOT = 'staticfiles'
+
+STATICFILES_DIRS = (
+    os.path.join(BASE_DIR, 'static'),
+)
+
+if os.getenv('DATABASE_URL') is not None:
+    DATABASES = {'default': dj_database_url.config()}
+else:
+# Heroku Settings end
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': 'TimeBank.sqlite',
+            }
     }
-}
 # Internationalization
 # https://docs.djangoproject.com/en/1.6/topics/i18n/
 
@@ -88,11 +97,7 @@ USE_L10N = True
 
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/1.6/howto/static-files/
-
-STATIC_URL = '/static/'
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 TEMPLATE_DIRS = (
     os.path.join(BASE_DIR, 'templates'),
