@@ -21,5 +21,5 @@ class ListingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Listing
-        fields = ('creation_date', 'description', 'category', 'category_name', 'owner', 'applicant', 'requested')
+        fields = ('id','creation_date', 'description', 'category', 'category_name', 'owner', 'applicant', 'requested')
 

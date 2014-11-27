@@ -2,18 +2,18 @@ from datetime import datetime
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Q
 from django.http import Http404, HttpResponse
 from django.template.defaultfilters import upper
 from rest_framework import viewsets
 from rest_framework.decorators import permission_classes, list_route, detail_route
 from rest_framework.parsers import JSONParser
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import permissions
 
 from server.serializers import UserSerializer, ListingSerializer
 from server.models import *
-
 
 
 # Create your views here.
@@ -24,15 +24,15 @@ class UserViewSet(viewsets.ViewSet):
 
     model = get_user_model()
     # serializer_class = UserSerializer
-    # permission_classes = (permissions.IsAdminUser,)
+    permission_classes = (permissions.IsAdminUser,)
 
-    @permission_classes((IsAuthenticated), )  # TODO change to IsAdmin in production
+    # TODO change to IsAdmin in production
     def list(self, request):
         queryset = get_user_model().objects.all()
         serializer = UserSerializer(queryset, many=True)
         return Response(serializer.data)
 
-    @permission_classes((IsAuthenticated), )
+
     def update(self, request, *args, **kwargs):
         # one = get_user_model().objects.all().filter(username__exact=kwargs['pk'])
         if request.user.username != get_user_model().objects.all().filter(username__exact=kwargs['pk']):
@@ -51,27 +51,8 @@ class UserViewSet(viewsets.ViewSet):
         ---
         # YAML (must be separated by `---`)
 
-        type:
-            id:
-                type: integer
-                required: true
-            creation_date:
-                type: date
-                required: true
-            description:
-                type: string
-                required: true
-            category:
-                type: integer
-                required: true
-            applicant:
-                type: integer
-                required: true
-            requested:
-                type: boolean
-                required: true
-
-        omit_serializer: true
+        omit_serializer: false
+        serializer: server.serializers.UserSerializer
 
         parameters:
            - name: Authorization
@@ -82,12 +63,62 @@ class UserViewSet(viewsets.ViewSet):
 
         responseMessages:
             - code: 200
-              message: Correctly authenticated
+              message: Correctly logged in
             - code: 401
               message: Invalid Authtentication
         """
         return Response(UserSerializer(request.user).data)
 
+    @list_route(methods=['DELETE'], permission_classes=[IsAuthenticated])
+    def logout(self, request, *args):
+        """
+        Logout endpoint
+        ---
+        # YAML (must be separated by `---`)
+
+        omit_serializer: false
+        serializer: server.serializers.ListingSerializer
+
+        parameters:
+           - name: Authorization
+             description: Basic HTTP authentication
+             required: true
+             type: string
+             paramType: header
+
+        responseMessages:
+            - code: 410
+              message: Correctly logged out
+            - code: 401
+              message: Invalid Authtentication
+        """
+        return Response(UserSerializer(request.user).data)
+
+    @list_route(methods=['GET'], permission_classes=[IsAuthenticated])
+    def my_profile(self, request, *args):
+        """
+        Return all mine listings plus ones that the user requested
+        ---
+        # YAML (must be separated by `---`)
+
+        omit_serializer: false
+        serializer: server.serializers.ListingSerializer
+
+        parameters:
+           - name: Authorization
+             description: Basic HTTP authentication
+             required: true
+             type: string
+             paramType: header
+
+        responseMessages:
+            - code: 200
+              message: OK
+            - code: 401
+              message: Invalid Authtentication
+        """
+        return Response(ListingSerializer(Listing.objects.filter(Q(owner=request.user) | Q(applicant=request.user)),
+                                          many=True).data)
 
 
 class ListingViewSet(viewsets.ViewSet):
@@ -469,5 +500,5 @@ class CityViewSet(viewsets.ReadOnlyModelViewSet):
         cities = City.objects.filter(province=upper(request.QUERY_PARAMS.get('province', None)))
         cities = ([[city.name, city.id] for city in cities])
         if len(cities) < 1:
-            return HttpResponse(status=400,)  # Bad Request
+            return HttpResponse(status=400, )  # Bad Request
         return Response(cities)
