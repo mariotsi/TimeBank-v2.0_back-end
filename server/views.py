@@ -7,7 +7,7 @@ from django.template.defaultfilters import upper
 from rest_framework import viewsets
 from rest_framework.decorators import permission_classes, list_route, detail_route
 from rest_framework.parsers import JSONParser
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import permissions
 
@@ -43,6 +43,51 @@ class UserViewSet(viewsets.ViewSet):
                 data.save()
             else:
                 raise Http404
+
+    @list_route(methods=['POST'], permission_classes=[IsAuthenticated])
+    def login(self, request, *args):
+        """
+        Login endpoint
+        ---
+        # YAML (must be separated by `---`)
+
+        type:
+            id:
+                type: integer
+                required: true
+            creation_date:
+                type: date
+                required: true
+            description:
+                type: string
+                required: true
+            category:
+                type: integer
+                required: true
+            applicant:
+                type: integer
+                required: true
+            requested:
+                type: boolean
+                required: true
+
+        omit_serializer: true
+
+        parameters:
+           - name: Authorization
+             description: Basic HTTP authentication
+             required: true
+             type: string
+             paramType: header
+
+        responseMessages:
+            - code: 200
+              message: Correctly authenticated
+            - code: 401
+              message: Invalid Authtentication
+        """
+        return Response(UserSerializer(request.user).data)
+
 
 
 class ListingViewSet(viewsets.ViewSet):
