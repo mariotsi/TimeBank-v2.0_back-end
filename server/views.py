@@ -92,7 +92,7 @@ class UserViewSet(viewsets.ViewSet):
             - code: 401
               message: Invalid Authtentication
         """
-        return Response(UserSerializer(request.user).data)
+        return HttpResponse(status=410)
 
     @list_route(methods=['GET'], permission_classes=[IsAuthenticated])
     def my_profile(self, request, *args):
