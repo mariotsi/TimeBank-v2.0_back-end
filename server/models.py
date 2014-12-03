@@ -18,7 +18,7 @@ class City(models.Model):
         ordering = ['name']
 
     def __str__(self):
-        return str(self.name)
+        return self.name
 
 
 class UserManager(BaseUserManager):
