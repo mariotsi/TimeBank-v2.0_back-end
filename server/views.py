@@ -447,7 +447,7 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     """
     queryset = Category.objects.all()
     model = Category
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (permissions.AllowAny,)
 
 
 class CityViewSet(viewsets.ReadOnlyModelViewSet):

@@ -17,8 +17,11 @@ class UserSerializer(serializers.ModelSerializer):
 
 class ListingSerializer(serializers.ModelSerializer):
     category_name = serializers.Field(source='category.name')
+    applicant_name = serializers.Field(source='applicant.username')
 
     class Meta:
         model = Listing
-        fields = ('id','creation_date', 'description', 'category', 'category_name', 'owner', 'applicant', 'requested')
+        fields = (
+            'id', 'creation_date', 'description', 'category', 'category_name', 'owner', 'applicant', 'applicant_name',
+            'requested')
 
