@@ -8,4 +8,4 @@ django-rest-swagger==0.2.1
 djangorestframework==3.11.2
 psycopg2==2.5.3
 pytz==2014.4
-requests==2.3.0
+requests==2.31.0
